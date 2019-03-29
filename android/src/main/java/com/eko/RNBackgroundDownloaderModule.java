@@ -2,6 +2,7 @@ package com.eko;
 
 import android.annotation.SuppressLint;
 import android.content.Context;
+import android.os.Environment;
 import android.content.SharedPreferences;
 import android.util.Log;
 
@@ -14,16 +15,21 @@ import com.facebook.react.bridge.ReadableMap;
 import com.facebook.react.bridge.ReadableMapKeySetIterator;
 import com.facebook.react.bridge.WritableArray;
 import com.facebook.react.bridge.WritableMap;
+import com.facebook.react.bridge.Callback;
 import com.facebook.react.modules.core.DeviceEventManagerModule;
 import com.tonyodev.fetch2.Download;
+import com.tonyodev.fetch2core.DownloadBlock;
+import com.tonyodev.fetch2core.Func;
+import com.tonyodev.fetch2.FetchConfiguration;
 import com.tonyodev.fetch2.Error;
 import com.tonyodev.fetch2.Fetch;
 import com.tonyodev.fetch2.FetchListener;
-import com.tonyodev.fetch2.Func;
 import com.tonyodev.fetch2.NetworkType;
 import com.tonyodev.fetch2.Priority;
 import com.tonyodev.fetch2.Request;
+import com.tonyodev.fetch2.EnqueueAction;
 import com.tonyodev.fetch2.Status;
+import com.tonyodev.fetch2.DefaultFetchNotificationManager;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -45,17 +51,19 @@ public class RNBackgroundDownloaderModule extends ReactContextBaseJavaModule imp
   private static final int TASK_CANCELING = 2;
   private static final int TASK_COMPLETED = 3;
 
-  private static Map<Status, Integer> stateMap = new HashMap<Status, Integer>() {{
-    put(Status.DOWNLOADING, TASK_RUNNING);
-    put(Status.COMPLETED, TASK_COMPLETED);
-    put(Status.PAUSED, TASK_SUSPENDED);
-    put(Status.QUEUED, TASK_RUNNING);
-    put(Status.CANCELLED, TASK_CANCELING);
-    put(Status.FAILED, TASK_CANCELING);
-    put(Status.REMOVED, TASK_CANCELING);
-    put(Status.DELETED, TASK_CANCELING);
-    put(Status.NONE, TASK_CANCELING);
-  }};
+  private static Map<Status, Integer> stateMap = new HashMap<Status, Integer>() {
+    {
+      put(Status.DOWNLOADING, TASK_RUNNING);
+      put(Status.COMPLETED, TASK_COMPLETED);
+      put(Status.PAUSED, TASK_SUSPENDED);
+      put(Status.QUEUED, TASK_RUNNING);
+      put(Status.CANCELLED, TASK_CANCELING);
+      put(Status.FAILED, TASK_CANCELING);
+      put(Status.REMOVED, TASK_CANCELING);
+      put(Status.DELETED, TASK_CANCELING);
+      put(Status.NONE, TASK_CANCELING);
+    }
+  };
 
   private Fetch fetch;
   private Map<String, Integer> idToRequestId = new HashMap<>();
@@ -67,11 +75,11 @@ public class RNBackgroundDownloaderModule extends ReactContextBaseJavaModule imp
 
   public RNBackgroundDownloaderModule(ReactApplicationContext reactContext) {
     super(reactContext);
-
     loadConfigMap();
-    fetch = new Fetch.Builder(this.getReactApplicationContext(), "RNBackgroundDownloader")
-            .setDownloadConcurrentLimit(4)
-            .build();
+    final FetchConfiguration fetchConfiguration = new FetchConfiguration.Builder(this.getReactApplicationContext())
+        .setDownloadConcurrentLimit(4)
+        .setNotificationManager(new DefaultFetchNotificationManager(this.getReactApplicationContext())).build();
+    fetch = Fetch.Impl.getInstance(fetchConfiguration);
     fetch.addListener(this);
   }
 
@@ -100,6 +108,8 @@ public class RNBackgroundDownloaderModule extends ReactContextBaseJavaModule imp
   public Map<String, Object> getConstants() {
     Map<String, Object> constants = new HashMap<>();
     constants.put("documents", this.getReactApplicationContext().getFilesDir().getAbsolutePath());
+    constants.put("music",
+        Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_MUSIC).getAbsolutePath());
     constants.put("TaskRunning", TASK_RUNNING);
     constants.put("TaskSuspended", TASK_SUSPENDED);
     constants.put("TaskCanceling", TASK_CANCELING);
@@ -109,7 +119,7 @@ public class RNBackgroundDownloaderModule extends ReactContextBaseJavaModule imp
     constants.put("PriorityLow", Priority.LOW.getValue());
     constants.put("OnlyWifi", NetworkType.WIFI_ONLY.getValue());
     constants.put("AllNetworks", NetworkType.ALL.getValue());
-    return  constants;
+    return constants;
   }
 
   private void removeFromMaps(int requestId) {
@@ -144,6 +154,22 @@ public class RNBackgroundDownloaderModule extends ReactContextBaseJavaModule imp
     }
   }
 
+  @ReactMethod
+  public void deleteFile(String path, Callback callback) {
+    File fdelete = new File(path);
+    if (fdelete.exists()) {
+      fdelete.delete();
+      callback.invoke(fdelete.delete());
+    } else
+      callback.invoke(false);
+  }
+
+  @ReactMethod
+  public void fileExists(String path, Callback callback) {
+    File fdelete = new File(path);
+    callback.invoke(fdelete.exists());
+  }
+
   // JS Methods
   @ReactMethod
   public void download(ReadableMap options) {
@@ -166,8 +192,10 @@ public class RNBackgroundDownloaderModule extends ReactContextBaseJavaModule imp
         request.addHeader(headerKey, headers.getString(headerKey));
       }
     }
+    request.setEnqueueAction(EnqueueAction.REPLACE_EXISTING);
     request.setPriority(options.hasKey("priority") ? Priority.valueOf(options.getInt("priority")) : Priority.NORMAL);
-    request.setNetworkType(options.hasKey("network") ? NetworkType.valueOf(options.getInt("network")) : NetworkType.ALL);
+    request
+        .setNetworkType(options.hasKey("network") ? NetworkType.valueOf(options.getInt("network")) : NetworkType.ALL);
     fetch.enqueue(request, null, null);
 
     idToRequestId.put(id, request.getId());
@@ -200,10 +228,27 @@ public class RNBackgroundDownloaderModule extends ReactContextBaseJavaModule imp
   }
 
   @ReactMethod
+  public void deleteTask(String identifier) {
+    Integer requestId = idToRequestId.get(identifier);
+    if (requestId != null) {
+      removeFromMaps(requestId);
+      fetch.delete(requestId);
+    }
+  }
+
+  @ReactMethod
+  public void retryTask(String identifier) {
+    Integer requestId = idToRequestId.get(identifier);
+    if (requestId != null) {
+      fetch.retry(requestId);
+    }
+  }
+
+  @ReactMethod
   public void checkForExistingDownloads(final Promise promise) {
-    fetch.getDownloads(new Func<List<? extends Download>>() {
+    fetch.getDownloads(new Func<List<Download>>() {
       @Override
-      public void call(List<? extends Download> downloads) {
+      public void call(List<Download> downloads) {
         WritableArray foundIds = Arguments.createArray();
 
         for (Download download : downloads) {
@@ -212,9 +257,9 @@ public class RNBackgroundDownloaderModule extends ReactContextBaseJavaModule imp
             WritableMap params = Arguments.createMap();
             params.putString("id", config.id);
             params.putInt("state", stateMap.get(download.getStatus()));
-            params.putInt("bytesWritten", (int)download.getDownloaded());
-            params.putInt("totalBytes", (int)download.getTotal());
-            params.putDouble("percent", ((double)download.getProgress()) / 100);
+            params.putInt("bytesWritten", (int) download.getDownloaded());
+            params.putInt("totalBytes", (int) download.getTotal());
+            params.putDouble("percent", ((double) download.getProgress()) / 100);
 
             foundIds.pushMap(params);
 
@@ -230,10 +275,58 @@ public class RNBackgroundDownloaderModule extends ReactContextBaseJavaModule imp
     });
   }
 
-  // Fetch API
   @Override
-  public void onQueued(Download download) {
+  public void onStarted(Download download, List<? extends DownloadBlock> downloads, int count) {
+    RNBGDTaskConfig config = requestIdToConfig.get(download.getId());
+    WritableMap params = Arguments.createMap();
+    params.putString("id", config.id);
+    params.putInt("expectedBytes", (int) download.getTotal());
+    ee.emit("downloadBegin", params);
+  }
 
+  @Override
+  public void onDownloadBlockUpdated(Download download, DownloadBlock block, int id) {
+
+  }
+
+  @Override
+  public void onError(Download download, Error error, Throwable throwable) {
+    WritableMap params = Arguments.createMap();
+    params.putString("id", requestIdToConfig.get(download.getId()).id);
+    if (error == Error.UNKNOWN && throwable != null) {
+      params.putString("error", throwable.getLocalizedMessage());
+    } else {
+      params.putString("error", error.toString());
+    }
+    ee.emit("downloadFailed", params);
+    saveConfigMap();
+    /*
+     * removeFromMaps(download.getId()); fetch.remove(download.getId());
+     */
+  }
+
+  @Override
+  public void onWaitingNetwork(Download download) {
+    WritableMap params = Arguments.createMap();
+    params.putString("id", requestIdToConfig.get(download.getId()).id);
+    ee.emit("waiting_for_network", params);
+  }
+
+  @Override
+  public void onQueued(Download download, boolean state) {
+    WritableMap params = Arguments.createMap();
+    params.putString("id", requestIdToConfig.get(download.getId()).id);
+    params.putBoolean("waitingForNetwork", state);
+    ee.emit("downloadQueued", params);
+  }
+
+  @Override
+  public void onAdded(Download download) {
+    RNBGDTaskConfig config = requestIdToConfig.get(download.getId());
+    WritableMap params = Arguments.createMap();
+    params.putString("id", config.id);
+    params.putInt("expectedBytes", (int) download.getTotal());
+    ee.emit("downloadAdded", params);
   }
 
   @Override
@@ -247,66 +340,49 @@ public class RNBackgroundDownloaderModule extends ReactContextBaseJavaModule imp
   }
 
   @Override
-  public void onError(Download download) {
-    Error error = download.getError();
-    Throwable throwable = error.getThrowable();
-
-    WritableMap params = Arguments.createMap();
-    params.putString("id", requestIdToConfig.get(download.getId()).id);
-    if (error == Error.UNKNOWN && throwable != null) {
-      params.putString("error", throwable.getLocalizedMessage());
-    } else {
-      params.putString("error", error.toString());
-    }
-    ee.emit("downloadFailed", params);
-
-    removeFromMaps(download.getId());
-    fetch.remove(download.getId());
-  }
-
-  @Override
   public void onProgress(Download download, long l, long l1) {
     RNBGDTaskConfig config = requestIdToConfig.get(download.getId());
     WritableMap params = Arguments.createMap();
     params.putString("id", config.id);
-
-    if (!config.reportedBegin) {
-      params.putInt("expectedBytes", (int)download.getTotal());
-      ee.emit("downloadBegin", params);
-      config.reportedBegin = true;
-    } else {
-      params.putInt("written", (int)download.getDownloaded());
-      params.putInt("total", (int)download.getTotal());
-      params.putDouble("percent", ((double)download.getProgress()) / 100);
-      progressReports.put(config.id, params);
-      Date now = new Date();
-      if (now.getTime() - lastProgressReport.getTime() > 1500) {
-        WritableArray reportsArray = Arguments.createArray();
-        for (WritableMap report : progressReports.values()) {
-          reportsArray.pushMap(report);
-        }
-        ee.emit("downloadProgress", reportsArray);
-        lastProgressReport = now;
-        progressReports.clear();
+    params.putInt("written", (int) download.getDownloaded());
+    params.putInt("total", (int) download.getTotal());
+    params.putDouble("percent", ((double) download.getProgress()) / 100);
+    progressReports.put(config.id, params);
+    Date now = new Date();
+    if (now.getTime() - lastProgressReport.getTime() > 1500) {
+      WritableArray reportsArray = Arguments.createArray();
+      for (WritableMap report : progressReports.values()) {
+        reportsArray.pushMap(report);
       }
+      ee.emit("downloadProgress", reportsArray);
+      lastProgressReport = now;
+      progressReports.clear();
     }
-
   }
 
   @Override
   public void onPaused(Download download) {
-
+    WritableMap params = Arguments.createMap();
+    params.putString("id", requestIdToConfig.get(download.getId()).id);
+    ee.emit("downloadPaused", params);
   }
 
   @Override
   public void onResumed(Download download) {
-
+    WritableMap params = Arguments.createMap();
+    params.putString("id", requestIdToConfig.get(download.getId()).id);
+    ee.emit("downloadResumed", params);
   }
 
   @Override
   public void onCancelled(Download download) {
-    removeFromMaps(download.getId());
-    fetch.delete(download.getId());
+    WritableMap params = Arguments.createMap();
+    params.putString("id", requestIdToConfig.get(download.getId()).id);
+    ee.emit("downloadCancelled", params);
+    saveConfigMap();
+    /*
+     * removeFromMaps(download.getId()); fetch.delete(download.getId());
+     */
   }
 
   @Override

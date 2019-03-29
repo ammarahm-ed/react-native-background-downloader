@@ -1,4 +1,3 @@
-[![npm version](https://badge.fury.io/js/react-native-background-downloader.svg)](https://badge.fury.io/js/react-native-background-downloader)
 
 # react-native-background-downloader
 
@@ -128,8 +127,8 @@ for (let task of lostTask) {
 
 `task.id` is very important for re-attaching the download task with any UI component representing that task, this is why you need to make sure to give sensible IDs that you know what to do with, try to avoid using random IDs.
 
-### Using custom headers
-If you need to send custom headers with your download request, you can do in it 2 ways:
+### Using costume headers
+If you need to send costume headers with your download request, you can do in it 2 ways:
 
 1) Globally using `RNBackgroundDownloader.setHeaders()`:
 ```javascript
