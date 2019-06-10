@@ -138,7 +138,7 @@ export function deleteFile(path, cb) {
   RNBackgroundDownloader.deleteFile(path, cb);
 }
 export function getFreeDiskStorage() {
-  return RNBackgroundDownloader.getFreeDiskStorage();
+  return RNBackgroundDownloader.freeDiskStorage;
 }
 export const directories = {
   documents: RNBackgroundDownloader.documents,

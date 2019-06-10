@@ -115,6 +115,7 @@ public class RNBackgroundDownloaderModule extends ReactContextBaseJavaModule imp
         Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS).getAbsolutePath());
     constants.put("music",
         Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_MUSIC).getAbsolutePath());
+    constants.put("freeDiskStorage", this.getFreeDiskStorage());
     constants.put("TaskRunning", TASK_RUNNING);
     constants.put("TaskSuspended", TASK_SUSPENDED);
     constants.put("TaskCanceling", TASK_CANCELING);
