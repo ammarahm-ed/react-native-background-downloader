@@ -140,7 +140,8 @@ export function deleteFile(path, cb) {
 
 export const directories = {
   documents: RNBackgroundDownloader.documents,
-  music: RNBackgroundDownloader.music
+  music: RNBackgroundDownloader.music,
+  downloads: RNBackgroundDownloader.downloads
 };
 
 export const Network = {

@@ -110,6 +110,8 @@ public class RNBackgroundDownloaderModule extends ReactContextBaseJavaModule imp
   public Map<String, Object> getConstants() {
     Map<String, Object> constants = new HashMap<>();
     constants.put("documents", this.getReactApplicationContext().getFilesDir().getAbsolutePath());
+    constants.put("downloads",
+        Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS).getAbsolutePath());
     constants.put("music",
         Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_MUSIC).getAbsolutePath());
     constants.put("TaskRunning", TASK_RUNNING);
