@@ -137,7 +137,9 @@ export function fileExists(path, cb) {
 export function deleteFile(path, cb) {
   RNBackgroundDownloader.deleteFile(path, cb);
 }
-
+export function getFreeDiskStorage() {
+  return RNBackgroundDownloader.getFreeDiskStorage();
+}
 export const directories = {
   documents: RNBackgroundDownloader.documents,
   music: RNBackgroundDownloader.music,
