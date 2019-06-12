@@ -158,6 +158,7 @@ export const Priority = {
 };
 
 export default {
+  getFreeDiskStorage,
   download,
   fileExists,
   deleteFile,
