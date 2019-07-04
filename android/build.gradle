@@ -18,7 +18,5 @@ android {
 dependencies {
     //noinspection GradleDynamicVersion
     provided 'com.facebook.react:react-native:+'
-    implementation "com.android.support:appcompat-v7:${rootProject.ext.supportLibVersion}"
-    implementation "com.android.support:support-annotations:28.0.0"
     implementation 'com.github.theweavrs.Fetch:fetch2:v3.0-SNAPSHOT'
 }
