@@ -18,7 +18,7 @@ android {
 dependencies {
     //noinspection GradleDynamicVersion
     provided 'com.facebook.react:react-native:+'
-    implementation "androidx.appcompat:appcompat:1.0.0"
-    implementation "androidx.annotation:annotation:1.0.0"
+    implementation "androidx.appcompat:appcompat:+"
+    implementation "androidx.annotation:annotation:+"
     implementation 'com.github.theweavrs.Fetch:fetch2:v3.0-SNAPSHOT'
 }
