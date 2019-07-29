@@ -20,5 +20,5 @@ dependencies {
     provided 'com.facebook.react:react-native:+'
     implementation "androidx.appcompat:appcompat:+"
     implementation "androidx.annotation:annotation:+"
-    implementation 'com.github.theweavrs.Fetch:fetch2:v3.0-SNAPSHOT'
+    implementation 'com.github.theweavrs.Fetch:fetch2:3.0.+'
 }
