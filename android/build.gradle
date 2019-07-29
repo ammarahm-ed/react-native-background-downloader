@@ -17,7 +17,7 @@ android {
 
 dependencies {
     //noinspection GradleDynamicVersion
-    provided 'com.facebook.react:react-native:+'
+    compileOnly 'com.facebook.react:react-native:+'
     implementation "androidx.appcompat:appcompat:+"
     implementation "androidx.annotation:annotation:+"
     implementation 'com.github.theweavrs.Fetch:fetch2:3.0.+'
