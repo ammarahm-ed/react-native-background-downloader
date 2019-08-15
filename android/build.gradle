@@ -14,7 +14,6 @@ android {
         }
     }
 }
-
 dependencies {
     //noinspection GradleDynamicVersion
     compileOnly 'com.facebook.react:react-native:+'

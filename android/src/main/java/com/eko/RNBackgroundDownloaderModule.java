@@ -1,9 +1,7 @@
 package com.eko;
 
 import android.annotation.SuppressLint;
-import android.content.Context;
 import android.os.Environment;
-import android.content.SharedPreferences;
 import android.util.Log;
 import android.os.Build;
 import android.os.StatFs;
@@ -32,6 +30,8 @@ import com.tonyodev.fetch2.Request;
 import com.tonyodev.fetch2.EnqueueAction;
 import com.tonyodev.fetch2.Status;
 import com.tonyodev.fetch2.DefaultFetchNotificationManager;
+
+import androidx.annotation.NonNull;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -101,11 +101,6 @@ public class RNBackgroundDownloaderModule extends ReactContextBaseJavaModule imp
     ee = getReactApplicationContext().getJSModule(DeviceEventManagerModule.RCTDeviceEventEmitter.class);
   }
 
-  @Override
-  public boolean hasConstants() {
-    return true;
-  }
-
   @Nullable
   @Override
   public Map<String, Object> getConstants() {
@@ -164,7 +159,6 @@ public class RNBackgroundDownloaderModule extends ReactContextBaseJavaModule imp
   public void deleteFile(String path, Callback callback) {
     File fdelete = new File(path);
     if (fdelete.exists()) {
-      fdelete.delete();
       callback.invoke(fdelete.delete());
     } else
       callback.invoke(false);
@@ -172,8 +166,8 @@ public class RNBackgroundDownloaderModule extends ReactContextBaseJavaModule imp
 
   @ReactMethod
   public void fileExists(String path, Callback callback) {
-    File fdelete = new File(path);
-    callback.invoke(fdelete.exists());
+    File file = new File(path);
+    callback.invoke(file.exists());
   }
 
   // JS Methods
@@ -260,6 +254,8 @@ public class RNBackgroundDownloaderModule extends ReactContextBaseJavaModule imp
         for (Download download : downloads) {
           if (requestIdToConfig.containsKey(download.getId())) {
             RNBGDTaskConfig config = requestIdToConfig.get(download.getId());
+            if(config == null || config.id == null || config.id.isEmpty())
+              return;
             WritableMap params = Arguments.createMap();
             params.putString("id", config.id);
             params.putInt("state", stateMap.get(download.getStatus()));
@@ -282,9 +278,10 @@ public class RNBackgroundDownloaderModule extends ReactContextBaseJavaModule imp
   }
 
   @Override
-  public void onStarted(Download download, List<? extends DownloadBlock> downloads, int count) {
-    if(download == null ) return;
+  public void onStarted(@NonNull Download download, @NonNull List<? extends DownloadBlock> downloads, int count) {
     RNBGDTaskConfig config = requestIdToConfig.get(download.getId());
+    if(config == null)
+      return;
     WritableMap params = Arguments.createMap();
     params.putString("id", config.id);
     params.putInt("expectedBytes", (int) download.getTotal());
@@ -297,10 +294,12 @@ public class RNBackgroundDownloaderModule extends ReactContextBaseJavaModule imp
   }
 
   @Override
-  public void onError(Download download, Error error, Throwable throwable) {
-    if(download == null ) return;
+  public void onError(@NonNull Download download, @NonNull Error error, Throwable throwable) {
     WritableMap params = Arguments.createMap();
-    params.putString("id", requestIdToConfig.get(download.getId()).id);
+    RNBGDTaskConfig config = requestIdToConfig.get(download.getId());
+    if(config == null)
+      return;
+    params.putString("id", config.id);
     if (error == Error.UNKNOWN && throwable != null) {
       params.putString("error", throwable.getLocalizedMessage());
     } else {
@@ -314,26 +313,31 @@ public class RNBackgroundDownloaderModule extends ReactContextBaseJavaModule imp
   }
 
   @Override
-  public void onWaitingNetwork(Download download) {
-    if(download == null ) return;
+  public void onWaitingNetwork(@NonNull Download download) {
     WritableMap params = Arguments.createMap();
-    params.putString("id", requestIdToConfig.get(download.getId()).id);
+    RNBGDTaskConfig config = requestIdToConfig.get(download.getId());
+    if(config == null)
+      return;
+    params.putString("id", config.id);
     ee.emit("waiting_for_network", params);
   }
 
   @Override
-  public void onQueued(Download download, boolean state) {
-    if(download == null ) return;
+  public void onQueued(@NonNull Download download, boolean state) {
     WritableMap params = Arguments.createMap();
-    params.putString("id", requestIdToConfig.get(download.getId()).id);
+    RNBGDTaskConfig config = requestIdToConfig.get(download.getId());
+    if(config == null)
+      return;
+    params.putString("id", config.id);
     params.putBoolean("waitingForNetwork", state);
     ee.emit("downloadQueued", params);
   }
 
   @Override
-  public void onAdded(Download download) {
-    if(download == null ) return;
+  public void onAdded(@NonNull Download download) {
     RNBGDTaskConfig config = requestIdToConfig.get(download.getId());
+    if(config == null)
+      return;
     WritableMap params = Arguments.createMap();
     params.putString("id", config.id);
     params.putInt("expectedBytes", (int) download.getTotal());
@@ -341,10 +345,12 @@ public class RNBackgroundDownloaderModule extends ReactContextBaseJavaModule imp
   }
 
   @Override
-  public void onCompleted(Download download) {
-    if(download == null ) return;
+  public void onCompleted(@NonNull Download download) {
     WritableMap params = Arguments.createMap();
-    params.putString("id", requestIdToConfig.get(download.getId()).id);
+    RNBGDTaskConfig config = requestIdToConfig.get(download.getId());
+    if(config == null)
+      return;
+    params.putString("id", config.id);
     ee.emit("downloadComplete", params);
 
     removeFromMaps(download.getId());
@@ -352,9 +358,10 @@ public class RNBackgroundDownloaderModule extends ReactContextBaseJavaModule imp
   }
 
   @Override
-  public void onProgress(Download download, long l, long l1) {
-    if(download == null ) return;
+  public void onProgress(@NonNull Download download, long l, long l1) {
     RNBGDTaskConfig config = requestIdToConfig.get(download.getId());
+    if(config == null)
+      return;
     WritableMap params = Arguments.createMap();
     params.putString("id", config.id);
     params.putInt("written", (int) download.getDownloaded());
@@ -374,26 +381,32 @@ public class RNBackgroundDownloaderModule extends ReactContextBaseJavaModule imp
   }
 
   @Override
-  public void onPaused(Download download) {
-    if(download == null ) return;
+  public void onPaused(@NonNull Download download) {
     WritableMap params = Arguments.createMap();
-    params.putString("id", requestIdToConfig.get(download.getId()).id);
+    RNBGDTaskConfig config = requestIdToConfig.get(download.getId());
+    if(config == null)
+      return;
+    params.putString("id", config.id);
     ee.emit("downloadPaused", params);
   }
 
   @Override
-  public void onResumed(Download download) {
-    if(download == null ) return;
+  public void onResumed(@NonNull Download download) {
     WritableMap params = Arguments.createMap();
-    params.putString("id", requestIdToConfig.get(download.getId()).id);
+    RNBGDTaskConfig config = requestIdToConfig.get(download.getId());
+    if(config == null)
+      return;
+    params.putString("id", config.id);
     ee.emit("downloadResumed", params);
   }
 
   @Override
-  public void onCancelled(Download download) {
-    if(download == null ) return;
+  public void onCancelled(@NonNull Download download) {
     WritableMap params = Arguments.createMap();
-    params.putString("id", requestIdToConfig.get(download.getId()).id);
+    RNBGDTaskConfig config = requestIdToConfig.get(download.getId());
+    if(config == null)
+      return;
+    params.putString("id", config.id);
     ee.emit("downloadCancelled", params);
     saveConfigMap();
     /*
