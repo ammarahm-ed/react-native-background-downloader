@@ -19,5 +19,5 @@ dependencies {
     compileOnly 'com.facebook.react:react-native:+'
     implementation "androidx.appcompat:appcompat:+"
     implementation "androidx.annotation:annotation:+"
-    implementation 'com.github.theweavrs.Fetch:fetch2:3.0.+'
+    implementation 'com.github.thecodrr.Fetch:fetch2:3.0.+'
 }
