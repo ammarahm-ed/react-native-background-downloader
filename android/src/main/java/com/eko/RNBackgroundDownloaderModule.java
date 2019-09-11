@@ -39,6 +39,7 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
+import java.util.ConcurrentModificationException;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
@@ -136,11 +137,14 @@ public class RNBackgroundDownloaderModule extends ReactContextBaseJavaModule imp
   private void saveConfigMap() {
     File file = new File(this.getReactApplicationContext().getFilesDir(), "RNFileBackgroundDownload_configMap");
     try {
+      if(!file.canWrite()) return;
       ObjectOutputStream outputStream = new ObjectOutputStream(new FileOutputStream(file));
       outputStream.writeObject(requestIdToConfig);
       outputStream.flush();
       outputStream.close();
     } catch (IOException e) {
+      e.printStackTrace();
+    } catch (ConcurrentModificationException e){
       e.printStackTrace();
     }
   }
@@ -148,6 +152,7 @@ public class RNBackgroundDownloaderModule extends ReactContextBaseJavaModule imp
   private void loadConfigMap() {
     File file = new File(this.getReactApplicationContext().getFilesDir(), "RNFileBackgroundDownload_configMap");
     try {
+      if(!file.exists()) return;
       ObjectInputStream inputStream = new ObjectInputStream(new FileInputStream(file));
       requestIdToConfig = (Map<Integer, RNBGDTaskConfig>) inputStream.readObject();
     } catch (IOException | ClassNotFoundException e) {
