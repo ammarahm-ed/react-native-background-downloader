@@ -1,12 +1,12 @@
 apply plugin: 'com.android.library'
 
 android {
-    compileSdkVersion 28
+    compileSdkVersion 29
     buildToolsVersion "28.0.3"
 
     defaultConfig {
-        minSdkVersion 16
-        targetSdkVersion 28
+        minSdkVersion 21
+        targetSdkVersion 29
         versionCode 1
         versionName "1.0"
         ndk {
@@ -17,7 +17,7 @@ android {
 dependencies {
     //noinspection GradleDynamicVersion
     compileOnly 'com.facebook.react:react-native:+'
-    implementation "androidx.appcompat:appcompat:+"
-    implementation "androidx.annotation:annotation:+"
-    implementation 'com.github.thecodrr.Fetch:fetch2:3.0.+'
+    implementation "androidx.appcompat:appcompat:1.3.1"
+    implementation "androidx.annotation:annotation:1.3.0"
+    implementation 'androidx.tonyodev.fetch2:xfetch2:3.1.6'
 }
