@@ -33,6 +33,8 @@ import com.tonyodev.fetch2.DefaultFetchNotificationManager;
 
 import androidx.annotation.NonNull;
 
+import org.jetbrains.annotations.NotNull;
+
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
@@ -82,7 +84,13 @@ public class RNBackgroundDownloaderModule extends ReactContextBaseJavaModule imp
     loadConfigMap();
     final FetchConfiguration fetchConfiguration = new FetchConfiguration.Builder(this.getReactApplicationContext())
         .setDownloadConcurrentLimit(4)
-        .setNotificationManager(new DefaultFetchNotificationManager(this.getReactApplicationContext())).build();
+        .setNotificationManager(new DefaultFetchNotificationManager(this.getReactApplicationContext()) {
+          @NotNull
+          @Override
+          public Fetch getFetchInstanceForNamespace(@NotNull String s) {
+            return fetch;
+          }
+        }).build();
     fetch = Fetch.Impl.getInstance(fetchConfiguration);
     fetch.addListener(this);
   }
